@@ -15,8 +15,10 @@ class Product(models.Model):
     category_data       = models.DateTimeField(auto_now_add=True)
     modified_date       = models.DateTimeField(auto_now=True)
 
-    def get_url(self):
+    def get_url(self): # tạo URL từ tên route (name) thay vì viết URL thủ công
         return reverse('product_detail', args=[self.category.slug, self.slug])
-    
+        # VD: reverse('product_detail', args=['electronics', 'iphone-15'])
+        # /electronics/iphone-15/
+
     def __str__(self):
         return self.product_name
