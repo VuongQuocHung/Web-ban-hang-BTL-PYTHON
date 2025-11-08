@@ -4,8 +4,11 @@
 <!-- ========================= SECTION PAGETOP ========================= -->
 <section class="section-pagetop bg">
 <div class="container">
-	<h2 class="title-page">Our Store</h2>
-	
+	{% if 'search' in request.path %}
+		<h2 class="title-page">Search Result</h2>
+	{% else %}
+		<h2 class="title-page">Our Store</h2>
+	{% endif %}
 </div> <!-- container //  -->
 </section>
 <!-- ========================= SECTION INTRO END// ========================= -->
@@ -109,7 +112,6 @@
 					</div><!-- card-body.// -->
 				</div>
 			</article> <!-- filter-group .// -->
-			
 		</div> <!-- card.// -->
 
 	</aside> <!-- col.// -->
@@ -117,11 +119,11 @@
 		<header class="border-bottom mb-4 pb-3">
 				<div class="form-inline">
 					<span class="mr-md-auto">Found: <b>{{ product_count }}</b> </span>
-					
 				</div>
 		</header><!-- sect-heading -->
 
 		<div class="row">
+			{% if products  %}
 			{% for product in products %}
 			<div class="col-md-4">
 				<figure class="card card-product-grid">
@@ -143,6 +145,9 @@
 				</figure>
 			</div> <!-- col.// -->
 			{% endfor %}
+			{% else %}
+				<h2>No result found. Please try again.</h2>
+			{% endif %}
 		</div>
 
 		<nav class="mt-4" aria-label="Page navigation sample">

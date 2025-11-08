@@ -1,31 +1,64 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.exceptions import ObjectDoesNotExist
-from store.models import Product
+from store.models import Product, Variation
 from .models import Cart, CartItem
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+
 # Create your views here.
 
+# lấy ra hoặc tạo ra một ID giỏ hàng (cart_id) dựa vào phiên làm việc (session) của người dùng.
 def _cart_id(request):
-    cart = request.session.session_key
-    if not cart:
-        cart = request.session.create()
-    return cart
+    cart = request.session.session_key # Lấy session id hiện tại của user
 
-# nút + tăng số lượng sản phẩm
-def add_cart(request, product_id):
-    product = Product.objects.get(id = product_id) # get the product
+    # Mỗi người truy cập website đều có một session.
+    # session_key chính là ID phiên đó.
+    # Nếu user chưa có session (lần đầu vào web), giá trị sẽ là None
+
+    if not cart:
+        cart = request.session.create() # Tạo session mới nếu chưa có (session_key = None)
+
+    return cart  # Trả lại session_id để dùng làm cart_id
+
+# Hàm nút + tăng số lượng sản phẩm và thêm vào giỏ hàng
+# Nhận product_id từ nút “Add to Cart”.
+# Lấy sản phẩm tương ứng.
+# Lấy các option/variation (color, size…) từ form nếu có.
+# Kiểm tra session: Lấy giỏ hàng của người dùng hoặc tạo mới.
+# Kiểm tra giỏ hàng:
+    # Nếu sản phẩm đã có → tăng quantity.
+    # Nếu chưa có → tạo cart item mới với quantity = 1.
+# Lưu các thay đổi vào DB.
+# Chuyển hướng về trang giỏ hàng.
+
+def add_cart(request, product_id): # product_id là ID sản phẩm mà người dùng bấm nút "Add to Cart".
+    product = Product.objects.get(id = product_id) # Lấy sản phẩm dựa theo product_id
+    product_variation = []
+    if request.method == 'POST': # Nếu form gửi lên có lựa chọn như color / size, vòng lặp lấy từng key=value
+        for item in request.POST:
+            key = item
+            value = request.POST[key]
+            
+            try:
+                variation = Variation.objects.get(product = product, variation_category__iexact = key, variation_value__iexact = value)
+                product_variation.append(variation)
+            except:
+                pass
+        
     try:
-        cart = Cart.objects.get(cart_id = _cart_id(request)) # get the cart using the cart_id present in the session
-    except Cart.DoesNotExist:
+        cart = Cart.objects.get(cart_id = _cart_id(request)) # Lấy giỏ hàng theo cart_id lưu trong session
+    except Cart.DoesNotExist: # nếu giỏ hàng ko tồn tại thì tạo mới
         cart = Cart.objects.create(
             cart_id = _cart_id(request)
         )
     cart.save()
 
-    try:
+    # Nếu sản phẩm đã có trong giỏ -> tăng quantity thêm 1.
+    try: 
         cart_item = CartItem.objects.get(product=product, cart=cart)
-        cart_item.quantity += 1# cart_item.quantity = cart_item.quantity + 1
+        cart_item.quantity += 1 # cart_item.quantity = cart_item.quantity + 1
         cart_item.save()
+    # Nếu sản phẩm chưa có trong giỏ -> tạo mới 1 cart item với số lượng = 1.
     except CartItem.DoesNotExist:
         cart_item = CartItem.objects.create(
             product = product,
@@ -33,7 +66,7 @@ def add_cart(request, product_id):
             cart = cart,
         )
         cart_item.save()
-    return redirect('cart')
+    return redirect('cart') # chuyển hướng về trang giỏ hàng
 
 # nút - giảm số lượng sản phẩm
 def remove_cart(request, product_id):
@@ -75,3 +108,8 @@ def cart(request, total = 0, quantity = 0, cart_items = None):
         'grand_total': grand_total,
     }
     return render(request, 'store/cart.html', context)
+
+@login_required(login_url='login')
+def checkout(request, total=0, quantity=0, cart_items=None):
+    return HttpResponse('checkout')
+    
